@@ -6,7 +6,7 @@ Game.Gameplay = function(game)
 	this.growth_interval = 3;
 	this.sprites_to_grow;
 	this.crits;
-	this.sounds = [];
+	this.sounds = {};
 };
 
 Game.Gameplay.prototype =
@@ -81,12 +81,13 @@ Game.Gameplay.prototype =
 		this.createGirl();
 		this.pointer = this.add.sprite(0, 0, 'tweezers', 0);
 
-		this.sounds.push(this.add.audio('ambient', 1, true));
-		this.sounds[0].play();
+		this.sounds['ambient'] = this.add.audio('ambient', 1, true);
+		this.sounds['pick_hair'] = this.add.audio('pick_hair', 1, false);
+		this.sounds['ambient'].play();
 
 		// Hair growth timer
 		this.timer = this.time.events.loop(Phaser.Timer.SECOND * this.growth_interval, this.growHair, this);
-		this.time.events.loop(Phaser.Timer.SECOND * 3, this.createCrit, this);
+		this.time.events.add(Phaser.Timer.SECOND * 3, this.createCrit, this);
 
 		// Fade in
 		this.camera.flash('#000000');
@@ -99,13 +100,17 @@ Game.Gameplay.prototype =
 
 	removeHair: function(sprite, pointer)
 	{
+		if (sprite.frame <= 0)
+			return;
+
 		var child_index = this.girl.getChildIndex(sprite);
-		sprite.frame = Math.max(sprite.frame - 1, 0);
+		sprite.frame -= 1;
 		var found = this.sprites_to_grow.find(function(value) { return value === child_index; });
 		if (!found)
 		{
 			this.sprites_to_grow.push(child_index);
 		}
+		this.sounds['pick_hair'].play();
 	},
 
 	growHair: function()
@@ -130,22 +135,53 @@ Game.Gameplay.prototype =
 
 	createCrit: function()
 	{
+		function createBubble(crit)
+		{
+			var bubble = crit.addChild(this.make.sprite(0, 0, 'bubble'));
+			bubble.anchor.x = 0.5;
+			bubble.anchor.y = 0.5;
+			var bub_tween = this.add.tween(bubble).to( { y: '+6' }, 600, Phaser.Easing.Linear.Out, true, 0, -1);
+			bub_tween.yoyo(true, 0);
+		};
+
 		var index = Game.rand(1, 3);
+		index = 1;																							// Remove
 		var name = 'cr_0' + index + '_body';
-		var x = Game.WIDTH;
-		var y = Game.rand(crit.height*2, Game.HEIGHT);
-		var crit = this.crits.create(x, y, name);
-		crit.addChild(this.make.sprite(0, 0, 'cr_0' + index + '_face'));
-		// Move up tween
-		var show = this.add.tween(crit).to( { x: '-'+(crit.width-80), y: '-'+crit.height }, 240, Phaser.Easing.Linear.Out);
-		show.start();
+		var crit = this.crits.create(0, 0, name);
+		crit.x = Game.WIDTH;
+		crit.y = Game.rand(crit.height, Game.HEIGHT);
+		crit.addChild(this.make.sprite(0, 0, 'cr_0' + index + '_face', 0));
+		var crit_anim = crit.getChildAt(0).animations.add('wind', [0, 1, 2, 3], 1, true);					// Remove
+		crit_anim.play('wind');																				// Remove
+
+		// Input
+		crit.inputEnabled = true;
+		crit.events.onInputDown.add(this.destroyCrit, this);
+
 		// Z-sorting of crits group
+		// Must do a trick with Y value in order to sort properly
+		crit.y -= crit.height;
 		this.crits.sort('y', Phaser.Group.SORT_ASCENDING);
+		crit.y += crit.height;
+
+		// Move up tween
+		var show = this.add.tween(crit).to( { x: '-'+(crit.width-100), y: '-'+crit.height }, 240, Phaser.Easing.Linear.Out);
+		show.onComplete.add(createBubble, this, crit);
+		show.start();
 	},
 
-	destroyCrit: function()
+	destroyCrit: function(sprite, pointer)
 	{
-
+		// Bubble tween
+		var bubble = sprite.getChildAt(1);
+		var destroy_tween = this.add.tween(bubble).to( { alpha: 0 }, 100, Phaser.Easing.Linear.Out);
+		var scale_tween = this.add.tween(bubble.scale).to( {x: 2, y: 2}, 100, Phaser.Easing.Linear.Out);
+		// Move down tween
+		var hide_tween = this.add.tween(sprite).to( { x: '+'+(sprite.width-100), y: '+'+sprite.height }, 240, Phaser.Easing.Linear.Out);
+		hide_tween.onComplete.add(function(object, tween) { object.destroy() }, this);
+		destroy_tween.chain(hide_tween);
+		scale_tween.start();
+		destroy_tween.start();
 	},
 
 	update: function()

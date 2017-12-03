@@ -30,15 +30,17 @@ Game.Preloader.prototype =
 		this.load.spritesheet('tweezers', 'assets/image/pinza.png', 182, 105, 2);
 
 		// People
-		this.load.spritesheet('cr_01_body', 'assets/image/criticons/cr_01/cr_01_corpo.png', 382, 332);
-		this.load.spritesheet('cr_01_face', 'assets/image/criticons/cr_01/cr_01_enfado.png', 382, 332);
+		this.load.spritesheet('cr_01_body', 'assets/image/criticons/cr_01/cr_01_corpo.png', 419, 445);
+		this.load.spritesheet('cr_01_face', 'assets/image/criticons/cr_01/cr_01_exp.png', 418, 445, 4);
 		this.load.spritesheet('cr_02_body', 'assets/image/criticons/cr_02/cr_02_corpo.png', 382, 317);
 		this.load.spritesheet('cr_02_face', 'assets/image/criticons/cr_02/cr_02_enfado.png', 382, 317);
 		this.load.spritesheet('cr_03_body', 'assets/image/criticons/cr_03/cr_03_corpo.png', 388, 355);
 		this.load.spritesheet('cr_03_face', 'assets/image/criticons/cr_03/cr_03_enfado.png', 388, 355);
+		this.load.spritesheet('bubble', 'assets/image/criticons/bocadillo.png', 118, 78);
 
 		// Audio
 		this.load.audio('ambient', 'assets/sound/ambient.ogg');
+		this.load.audio('pick_hair', 'assets/sound/quitar_pelo.ogg');
 	},
 
 	create: function()
