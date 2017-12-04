@@ -16,7 +16,8 @@ Game.Preloader.prototype =
 
 		// Girl
 		this.load.spritesheet('body', 'assets/image/corpo.png', 385, 473);
-		this.load.spritesheet('head', 'assets/image/cabeza.png', 384, 473, 2);
+		//this.load.spritesheet('head', 'assets/image/cabeza.png', 384, 473, 2);
+		this.load.spritesheet('head', 'assets/image/pelo.png', 385, 473, 7);
 		this.load.spritesheet('face', 'assets/image/expresions.png', 385, 472, 3);
 		// Hair
 		this.load.spritesheet('arm_left', 'assets/image/pelo/br_es.png', 108, 60, 4);
