@@ -17,8 +17,7 @@ Game.Preloader.prototype =
 		// Girl
 		this.load.spritesheet('body', 'assets/image/corpo.png', 385, 473);
 		this.load.spritesheet('head', 'assets/image/cabeza.png', 384, 473, 2);
-		this.load.spritesheet('face', 'assets/image/cara.png', 385, 473);
-		//this.load.spritesheet('face', 'assets/image/expresions.png', 384, 472, 3);
+		this.load.spritesheet('face', 'assets/image/expresions.png', 385, 472, 3);
 		// Hair
 		this.load.spritesheet('arm_left', 'assets/image/pelo/br_es.png', 108, 60, 4);
 		this.load.spritesheet('arm_right', 'assets/image/pelo/br_der.png', 45, 77, 4);
@@ -43,12 +42,12 @@ Game.Preloader.prototype =
 		this.load.spritesheet('cr_05_face', 'assets/image/criticons/cr_05/cr_05_exp.png', 416, 423, 4);
 		this.load.spritesheet('cr_06_body', 'assets/image/criticons/cr_06/cr_06_corpo.png', 420, 428);
 		this.load.spritesheet('cr_06_face', 'assets/image/criticons/cr_06/cr_06_exp.png', 419, 428, 4);
-		this.load.spritesheet('bubble', 'assets/image/criticons/bocadillo.png', 118, 78);
+		this.load.spritesheet('bubble', 'assets/image/criticons/bocadillo.png', 118, 78, 2);
 
 		// Audio
 		this.load.audio('ambient', 'assets/sound/ambient.ogg');
 		this.load.audio('pick_hair', 'assets/sound/quitar_pelo.ogg');
-		this.load.audio('woman_angry_1', 'assets/sound/cr_muller_enfado1.ogg');
+		this.load.audio('woman_angry_3', 'assets/sound/cr_muller_enfado3.ogg');
 		this.load.audio('woman_angry_2', 'assets/sound/cr_muller_enfado2.ogg');
 		this.load.audio('woman_sorry', 'assets/sound/cr_muller_pena.ogg');
 		this.load.audio('woman_hurt', 'assets/sound/cr_muller_pincha.ogg');

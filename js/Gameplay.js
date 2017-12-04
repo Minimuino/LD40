@@ -7,7 +7,8 @@ Game.Gameplay = function(game)
 	this.sprites_to_grow;
 	this.crits;  // Crits are angry people that shout at you because of your hair
 	this.sounds = {};
-	this.crit_slots = [
+	this.crit_slots = [];
+	this.crit_slots_database = [
 		{ pos: new Phaser.Point(Game.WIDTH, Game.HEIGHT + 120), free: true },
 		{ pos: new Phaser.Point(Game.WIDTH, Game.HEIGHT + 10), free: true },
 		{ pos: new Phaser.Point(Game.WIDTH, Game.HEIGHT - 100), free: true },
@@ -25,10 +26,9 @@ Game.Gameplay.prototype =
 
 		// Body sprites
 		var head = this.make.sprite(0, 0, 'head', 0);
-		var head_anim = head.animations.add('wind', [0, 1], 5, true);
-		head_anim.play('wind');
 		this.girl.addChild(head);
-		this.girl.getChildAt(0).addChild(this.make.sprite(0, 0, 'face', 0));
+		this.girl.face = this.make.sprite(0, 0, 'face', 0);
+		this.girl.getChildAt(0).addChild(this.girl.face);
 		this.girl.inputEnabled = true;
 		// Hair sprites
 		var arm_left = this.make.sprite(37, 26, 'arm_left', 0);
@@ -47,7 +47,7 @@ Game.Gameplay.prototype =
 		armpit_right.inputEnabled = true;
 		armpit_right.events.onInputDown.add(this.removeHair, this);
 		this.girl.addChild(armpit_right);
-		var eyebrow = this.make.sprite(217, 76, 'eyebrow', 0);
+		var eyebrow = this.make.sprite(219, 78, 'eyebrow', 0);
 		eyebrow.inputEnabled = true;
 		eyebrow.events.onInputDown.add(this.removeHair, this);
 		this.girl.addChild(eyebrow);
@@ -60,12 +60,24 @@ Game.Gameplay.prototype =
 		pubis.events.onInputDown.add(this.removeHair, this);
 		this.girl.addChild(pubis);
 
+		// Amimations
+		this.girl.resetFace = function()
+		{
+			this.girl.face.frame = 0;
+		};
+		var head_anim = head.animations.add('wind', [0, 1], 5, true);
+		head_anim.play('wind');
+		var smile_anim = this.girl.face.animations.add('smile', [1], 1, false);
+		var disgust_anim = this.girl.face.animations.add('disgusting', [2], 1, false);
+		smile_anim.onComplete.add(this.girl.resetFace, this);
+		disgust_anim.onComplete.add(this.girl.resetFace, this);
+
+		// Gameplay parameters
 		this.sprites_to_grow = [1, 2, 3, 4, 5, 6, 7];
-		this.girl.hair_rate = 0;
 		this.girl.hair_timer;
 		// growth_intervals and hair_stages have to be the same length
-		this.girl.growth_intervals = [10, 5, 2, 1, 0.5];
-		this.girl.hair_stages = [1, 2, 3, 4, 5];
+		this.girl.growth_intervals = [1, 5, 2, 1, 0.5];
+		this.girl.hair_stages = [16, 2, 3, 4, 5];
 		this.girl.current_stage = 0;
 		this.girl.hair_count = 0;
 
@@ -105,7 +117,7 @@ Game.Gameplay.prototype =
 		// Hair growth timer
 		this.girl.hair_timer = this.time.events.loop(Phaser.Timer.SECOND * this.girl.growth_intervals[0], this.growHair, this);
 		// Auto-crit timer
-		this.time.events.loop(Phaser.Timer.SECOND * 2, this.generateCrit, this);
+		//this.time.events.loop(Phaser.Timer.SECOND * 2, this.generateCrit, this);
 
 		// Fade in
 		this.camera.flash('#000000');
@@ -130,8 +142,6 @@ Game.Gameplay.prototype =
 		}
 		this.sounds['pick_hair'].play();
 		this.girl.hair_count += 1;
-
-		this.leaveCrit(this.crits.getRandom());
 	},
 
 	growHair: function()
@@ -146,7 +156,6 @@ Game.Gameplay.prototype =
 		// Increase frame number
 		var sprite = this.girl.getChildAt(child_index);
 		sprite.frame = Math.min(sprite.frame + 1, sprite.animations.frameTotal - 1);
-		this.girl.hair_rate += 1;
 
 		// Remove sprite from list if it reached its maximum
 		if (sprite.frame === sprite.animations.frameTotal - 1)
@@ -163,7 +172,7 @@ Game.Gameplay.prototype =
 		this.girl.tint += tint_delta;
 		this.girl.getChildAt(0).tint += tint_delta;
 		this.girl.getChildAt(1).tint += tint_delta;
-		this.girl.getChildAt(0).getChildAt(0).tint += tint_delta;
+		this.girl.face.tint += tint_delta;
 		this.background.tint += tint_delta;
 	},
 
@@ -171,7 +180,7 @@ Game.Gameplay.prototype =
 	{
 		function createBubble(crit)
 		{
-			var bubble = crit.addChild(this.make.sprite(0, 20, 'bubble'));
+			var bubble = crit.addChild(this.make.sprite(0, 20, 'bubble', 0));
 			bubble.anchor.setTo(0.5, 0.5);
 			var bub_tween = this.add.tween(bubble).to( { y: '+6' }, 600, Phaser.Easing.Linear.Out, true, 0, -1);
 			bub_tween.yoyo(true, 0);
@@ -196,7 +205,7 @@ Game.Gameplay.prototype =
 		if (index <= 3)
 		{
 			// It's a woman
-			crit.sounds['angry1'] = this.add.audio('woman_angry_1', 0.1, false);
+			crit.sounds['angry1'] = this.add.audio('woman_angry_3', 0.1, false);
 			crit.sounds['angry2'] = this.add.audio('woman_angry_2', 0.1, false);
 			crit.sounds['sorry'] = this.add.audio('woman_sorry', 0.1, false);
 			crit.sounds['hurt'] = this.add.audio('woman_hurt', 0.1, false);
@@ -212,7 +221,10 @@ Game.Gameplay.prototype =
 			crit.sounds['laugh'] = this.add.audio('man_laugh', 0.1, false);
 		}
 		if (slot >= 3)
+		{
 			crit.sounds['angry1'].play();
+			console.log('putas');
+		}
 		else
 			crit.sounds['angry2'].play();
 
@@ -233,7 +245,10 @@ Game.Gameplay.prototype =
 
 	destroyCritSprite: function(object, tween)
 	{
-		this.crit_slots[object.crit_slot].free = true;
+		if (this.crit_slots[object.crit_slot])
+		{
+			this.crit_slots[object.crit_slot].free = true;
+		}
 		object.destroy();
 	},
 
@@ -261,6 +276,9 @@ Game.Gameplay.prototype =
 		//console.log(free_slot + ' ' + slot);
 		var name = 'cr_0' + index + '_body';
 		this.createCritSprite(this.crit_slots[slot].pos.x, this.crit_slots[slot].pos.y, name, index, slot);
+
+		// Girl animation
+		this.girl.face.animations.play('disgusting');
 	},
 
 	destroyCrit: function(sprite, pointer)
@@ -285,11 +303,19 @@ Game.Gameplay.prototype =
 		sprite.sounds['hurt'].play();
 		sprite.inputEnabled = false;
 		this.tintWorld(0x050505)
+
+		// Girl animation
+		this.girl.face.animations.play('smile');
 	},
 
 	leaveCrit: function(sprite)
 	{
+		if (!sprite)
+			return;
+
 		// Change bubble sprite to approval
+		var bubble = sprite.getChildAt(1);
+		bubble.frame = 1;
 		// Move side tween
 		var x_sign = (sprite.crit_slot >= 3) ? '-' : '+'
 		var x_delta = x_sign + (Math.abs(sprite.width) - 120);
@@ -302,6 +328,35 @@ Game.Gameplay.prototype =
 		sprite.sounds['laugh'].play();
 		sprite.inputEnabled = false;
 		this.tintWorld(-0x050505);
+	},
+
+	computeHairRate: function()
+	{
+		var count = 0;
+		var total = 0;
+		for (var i = 1; i < this.girl.children.length; i += 1)
+		{
+			count += this.girl.getChildAt(i).frame;
+			total += this.girl.getChildAt(i).animations.frameTotal - 1;
+		}
+		return count / total;
+	},
+
+	updateSlots: function(n)
+	{
+		while (this.crit_slots.length != n)
+		{
+			if (this.crit_slots.length < n)
+			{
+				this.crit_slots.push(this.crit_slots_database[this.crit_slots.length]);
+				this.generateCrit();
+			}
+			else if (this.crit_slots.length > n)
+			{
+				this.leaveCrit(this.crits.getRandom());
+				this.crit_slots.pop();
+			}
+		}
 	},
 
 	update: function()
@@ -328,33 +383,42 @@ Game.Gameplay.prototype =
 		}
 
 		// Update crits
-		if (this.girl.hair_rate < 0.1)
+		var hair_rate = this.computeHairRate();
+		if (hair_rate < 0.1)
 		{
 			// No slots
+			this.updateSlots(0);
 		}
-		else if (this.girl.hair_rate < 0.2)
+		else if (hair_rate < 0.2)
 		{
 			// 1 slots
+			this.updateSlots(1);
 		}
-		else if (this.girl.hair_rate < 0.35)
+		else if (hair_rate < 0.35)
 		{
 			// 2 slots
+			this.updateSlots(2);
 		}
-		else if (this.girl.hair_rate < 0.5)
+		else if (hair_rate < 0.5)
 		{
 			// 3 slots
+			this.updateSlots(3);
 		}
-		else if (this.girl.hair_rate < 0.75)
+		else if (hair_rate < 0.75)
 		{
 			// 4 slots
+			this.updateSlots(4);
 		}
-		else if (this.girl.hair_rate < 0.8)
+		else if (hair_rate < 0.8)
 		{
 			// 5 slots
+			this.updateSlots(5);
 		}
-		else if (this.girl.hair_rate < 0.9)
+		else if (hair_rate < 0.9)
 		{
 			// 6 slots
+			this.updateSlots(6);
 		}
+		console.log(hair_rate + ', ' + this.crit_slots.length);
 	}
 };
