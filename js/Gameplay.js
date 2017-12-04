@@ -1,11 +1,12 @@
 Game.Gameplay = function(game)
 {
 	this.pointer;
+	this.background;
 	this.girl;
 	this.walk_tween;
 	this.growth_interval = 3;
 	this.sprites_to_grow;
-	this.crits;
+	this.crits;  // Crits are angry people that shout at you because of your hair
 	this.sounds = {};
 	this.crit_slots = [
 		{ pos: new Phaser.Point(Game.WIDTH, Game.HEIGHT + 120), free: true },
@@ -83,7 +84,9 @@ Game.Gameplay.prototype =
 
 	create: function()
 	{
-		var back = this.add.sprite(0, 0, 'background');
+		this.background = this.add.sprite(-100, 0, 'background');
+		var background_tween = this.add.tween(this.background).to( { x: '+200' }, 30000, Phaser.Easing.Linear.InOut, true, 0, -1);
+		background_tween.yoyo(true, 0);
 
 		this.crits = this.add.group();
 		this.createGirl();
@@ -119,6 +122,8 @@ Game.Gameplay.prototype =
 			this.sprites_to_grow.push(child_index);
 		}
 		this.sounds['pick_hair'].play();
+
+		this.leaveCrit(this.crits.getRandom());
 	},
 
 	growHair: function()
@@ -141,6 +146,18 @@ Game.Gameplay.prototype =
 		}
 	},
 
+	tintWorld: function(tint_delta)
+	{
+		if (((this.girl.tint == 0x111111) && (tint_delta < 0)) ||
+			((this.girl.tint == 0xffffff) && (tint_delta > 0)))
+			return;
+		this.girl.tint += tint_delta;
+		this.girl.getChildAt(0).tint += tint_delta;
+		this.girl.getChildAt(1).tint += tint_delta;
+		this.girl.getChildAt(0).getChildAt(0).tint += tint_delta;
+		this.background.tint += tint_delta;
+	},
+
 	createCrit: function()
 	{
 		function createBubble(crit)
@@ -153,7 +170,6 @@ Game.Gameplay.prototype =
 
 		var index = Game.rand(1, 6);
 		var slot = Game.rand(0, 5);
-		console.log(slot);
 		if (!this.crit_slots[slot].free)
 			return;
 		var name = 'cr_0' + index + '_body';
@@ -192,7 +208,10 @@ Game.Gameplay.prototype =
 			crit.sounds['hurt'] = this.add.audio('man_hurt', 0.1, false);
 			crit.sounds['laugh'] = this.add.audio('man_laugh', 0.1, false);
 		}
-		crit.sounds['angry2'].play();
+		if (slot >= 3)
+			crit.sounds['angry1'].play();
+		else
+			crit.sounds['angry2'].play();
 
 		// Z-sorting of crits group
 		// Must do a trick with Y value in order to sort properly
@@ -209,6 +228,12 @@ Game.Gameplay.prototype =
 		show.start();
 	},
 
+	destroyCritSprite: function(object, tween)
+	{
+		this.crit_slots[object.crit_slot].free = true;
+		object.destroy();
+	},
+
 	destroyCrit: function(sprite, pointer)
 	{
 		// Bubble tween
@@ -216,8 +241,12 @@ Game.Gameplay.prototype =
 		var destroy_tween = this.add.tween(bubble).to( { alpha: 0 }, 100, Phaser.Easing.Linear.Out);
 		var scale_tween = this.add.tween(bubble.scale).to( {x: 2, y: 2}, 100, Phaser.Easing.Linear.Out);
 		// Move down tween
-		var hide_tween = this.add.tween(sprite).to( { x: '+'+(sprite.width-120), y: '+'+sprite.height }, 240, Phaser.Easing.Linear.Out);
-		hide_tween.onComplete.add(function(object, tween) { object.destroy() }, this);
+		var x_sign = (sprite.crit_slot >= 3) ? '-' : '+'
+		var x_delta = x_sign + (Math.abs(sprite.width) - 120);
+		var y_delta = '+' + sprite.height;
+		var hide_tween = this.add.tween(sprite).to( { x: x_delta, y: y_delta }, 1900, Phaser.Easing.Linear.Out, false, 800);
+		hide_tween.onStart.add(function(object, tween) { object.getChildAt(0).frame = 2; object.sounds['sorry'].play(); }, this);
+		hide_tween.onComplete.add(this.destroyCritSprite, this);
 		destroy_tween.chain(hide_tween);
 		scale_tween.start();
 		destroy_tween.start();
@@ -225,7 +254,25 @@ Game.Gameplay.prototype =
 		// Other stuff
 		sprite.getChildAt(0).frame = 1;
 		sprite.sounds['hurt'].play();
-		this.crit_slots[sprite.crit_slot].free = true;
+		sprite.inputEnabled = false;
+		this.tintWorld(0x111111)
+	},
+
+	leaveCrit: function(sprite)
+	{
+		// Change bubble sprite to approval
+		// Move side tween
+		var x_sign = (sprite.crit_slot >= 3) ? '-' : '+'
+		var x_delta = x_sign + (Math.abs(sprite.width) - 120);
+		var hide_tween = this.add.tween(sprite).to( { x: x_delta }, 1900, Phaser.Easing.Linear.Out, false, 800);
+		hide_tween.onComplete.add(this.destroyCritSprite, this);
+		hide_tween.start();
+
+		// Other stuff
+		sprite.getChildAt(0).frame = 3;
+		sprite.sounds['laugh'].play();
+		sprite.inputEnabled = false;
+		this.tintWorld(-0x111111);
 	},
 
 	update: function()
