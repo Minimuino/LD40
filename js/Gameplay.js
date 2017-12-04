@@ -4,7 +4,6 @@ Game.Gameplay = function(game)
 	this.background;
 	this.girl;
 	this.walk_tween;
-	this.growth_interval = 3;
 	this.sprites_to_grow;
 	this.crits;  // Crits are angry people that shout at you because of your hair
 	this.sounds = {};
@@ -62,6 +61,13 @@ Game.Gameplay.prototype =
 		this.girl.addChild(pubis);
 
 		this.sprites_to_grow = [1, 2, 3, 4, 5, 6, 7];
+		this.girl.hair_rate = 0;
+		this.girl.hair_timer;
+		// growth_intervals and hair_stages have to be the same length
+		this.girl.growth_intervals = [10, 5, 2, 1, 0.5];
+		this.girl.hair_stages = [1, 2, 3, 4, 5];
+		this.girl.current_stage = 0;
+		this.girl.hair_count = 0;
 
 		// Move down tween
 		var body_down_1 = this.add.tween(this.girl).to( { y: '+4' }, 400, Phaser.Easing.Cubic.Out);
@@ -93,12 +99,13 @@ Game.Gameplay.prototype =
 		this.pointer = this.add.sprite(0, 0, 'tweezers', 0);
 
 		this.sounds['ambient'] = this.add.audio('ambient', 1, true);
-		this.sounds['pick_hair'] = this.add.audio('pick_hair', 1, false);
+		this.sounds['pick_hair'] = this.add.audio('pick_hair', 0.5, false);
 		this.sounds['ambient'].play();
 
 		// Hair growth timer
-		this.timer = this.time.events.loop(Phaser.Timer.SECOND * this.growth_interval, this.growHair, this);
-		this.time.events.loop(Phaser.Timer.SECOND * 1, this.createCrit, this);
+		this.girl.hair_timer = this.time.events.loop(Phaser.Timer.SECOND * this.girl.growth_intervals[0], this.growHair, this);
+		// Auto-crit timer
+		this.time.events.loop(Phaser.Timer.SECOND * 2, this.generateCrit, this);
 
 		// Fade in
 		this.camera.flash('#000000');
@@ -122,6 +129,7 @@ Game.Gameplay.prototype =
 			this.sprites_to_grow.push(child_index);
 		}
 		this.sounds['pick_hair'].play();
+		this.girl.hair_count += 1;
 
 		this.leaveCrit(this.crits.getRandom());
 	},
@@ -138,6 +146,7 @@ Game.Gameplay.prototype =
 		// Increase frame number
 		var sprite = this.girl.getChildAt(child_index);
 		sprite.frame = Math.min(sprite.frame + 1, sprite.animations.frameTotal - 1);
+		this.girl.hair_rate += 1;
 
 		// Remove sprite from list if it reached its maximum
 		if (sprite.frame === sprite.animations.frameTotal - 1)
@@ -148,8 +157,8 @@ Game.Gameplay.prototype =
 
 	tintWorld: function(tint_delta)
 	{
-		if (((this.girl.tint == 0x111111) && (tint_delta < 0)) ||
-			((this.girl.tint == 0xffffff) && (tint_delta > 0)))
+		if (((this.girl.tint <= 0x222222) && (tint_delta < 0)) ||
+			((this.girl.tint >= 0xffff00) && (tint_delta > 0)))
 			return;
 		this.girl.tint += tint_delta;
 		this.girl.getChildAt(0).tint += tint_delta;
@@ -158,7 +167,7 @@ Game.Gameplay.prototype =
 		this.background.tint += tint_delta;
 	},
 
-	createCrit: function()
+	createCritSprite: function(x, y, name, index, slot)
 	{
 		function createBubble(crit)
 		{
@@ -168,14 +177,8 @@ Game.Gameplay.prototype =
 			bub_tween.yoyo(true, 0);
 		};
 
-		var index = Game.rand(1, 6);
-		var slot = Game.rand(0, 5);
-		if (!this.crit_slots[slot].free)
-			return;
-		var name = 'cr_0' + index + '_body';
-		var crit = this.crits.create(0, 0, name);
-		crit.x = this.crit_slots[slot].pos.x;
-		crit.y = this.crit_slots[slot].pos.y;
+		// Create sprite
+		var crit = this.crits.create(x, y, name);
 		if (slot >= 3)
 		{
 			crit.scale.x *= -1;
@@ -234,6 +237,32 @@ Game.Gameplay.prototype =
 		object.destroy();
 	},
 
+	generateCrit: function()
+	{
+		// Select sprite and slot
+		var index = Game.rand(1, 6);
+		var free_slots = this.crit_slots.reduce(function(prev, element, index, arr) { return (element.free) ? prev + 1 : prev; }, 0);
+		if (free_slots == 0)
+			return;
+		var free_slot = Game.rand(1, free_slots);
+		var slot = 0;
+		for (var i = 0; i < this.crit_slots.length; i += 1)
+		{
+			if (this.crit_slots[i].free)
+			{
+				slot += 1;
+			}
+			if (slot == free_slot)
+			{
+				slot = i;
+				break;
+			}
+		}
+		//console.log(free_slot + ' ' + slot);
+		var name = 'cr_0' + index + '_body';
+		this.createCritSprite(this.crit_slots[slot].pos.x, this.crit_slots[slot].pos.y, name, index, slot);
+	},
+
 	destroyCrit: function(sprite, pointer)
 	{
 		// Bubble tween
@@ -255,7 +284,7 @@ Game.Gameplay.prototype =
 		sprite.getChildAt(0).frame = 1;
 		sprite.sounds['hurt'].play();
 		sprite.inputEnabled = false;
-		this.tintWorld(0x111111)
+		this.tintWorld(0x050505)
 	},
 
 	leaveCrit: function(sprite)
@@ -272,11 +301,12 @@ Game.Gameplay.prototype =
 		sprite.getChildAt(0).frame = 3;
 		sprite.sounds['laugh'].play();
 		sprite.inputEnabled = false;
-		this.tintWorld(-0x111111);
+		this.tintWorld(-0x050505);
 	},
 
 	update: function()
 	{
+		// Update pointer
 		this.pointer.x = this.input.activePointer.x - 6;
 		this.pointer.y = this.input.activePointer.y - 6;
 		if (this.input.activePointer.isDown)
@@ -286,6 +316,45 @@ Game.Gameplay.prototype =
 		else
 		{
 			this.pointer.frame = 0;
+		}
+
+		// Update hair growth interval
+		if ((this.girl.hair_count >= this.girl.hair_stages[this.girl.current_stage]) &&
+			(this.girl.current_stage < (this.girl.hair_stages.length - 1)))
+		{
+			this.girl.current_stage += 1;
+			this.girl.hair_count = 0;
+			this.girl.hair_timer.delay = Phaser.Timer.SECOND * this.girl.growth_intervals[this.girl.current_stage];
+		}
+
+		// Update crits
+		if (this.girl.hair_rate < 0.1)
+		{
+			// No slots
+		}
+		else if (this.girl.hair_rate < 0.2)
+		{
+			// 1 slots
+		}
+		else if (this.girl.hair_rate < 0.35)
+		{
+			// 2 slots
+		}
+		else if (this.girl.hair_rate < 0.5)
+		{
+			// 3 slots
+		}
+		else if (this.girl.hair_rate < 0.75)
+		{
+			// 4 slots
+		}
+		else if (this.girl.hair_rate < 0.8)
+		{
+			// 5 slots
+		}
+		else if (this.girl.hair_rate < 0.9)
+		{
+			// 6 slots
 		}
 	}
 };
