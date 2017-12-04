@@ -7,20 +7,28 @@ Game.Gameplay = function(game)
 	this.sprites_to_grow;
 	this.crits;
 	this.sounds = {};
+	this.crit_slots = [
+		{ pos: new Phaser.Point(Game.WIDTH, Game.HEIGHT + 120), free: true },
+		{ pos: new Phaser.Point(Game.WIDTH, Game.HEIGHT + 10), free: true },
+		{ pos: new Phaser.Point(Game.WIDTH, Game.HEIGHT - 100), free: true },
+		{ pos: new Phaser.Point(-50, Game.HEIGHT + 120), free: true },
+		{ pos: new Phaser.Point(-50, Game.HEIGHT + 10), free: true },
+		{ pos: new Phaser.Point(-50, Game.HEIGHT - 100), free: true }
+	];
 };
 
 Game.Gameplay.prototype =
 {
 	createGirl: function()
 	{
-		this.girl = this.add.sprite(200, 85, 'body');
+		this.girl = this.add.sprite(240, 85, 'body');
 
 		// Body sprites
 		var head = this.make.sprite(0, 0, 'head', 0);
 		var head_anim = head.animations.add('wind', [0, 1], 5, true);
 		head_anim.play('wind');
 		this.girl.addChild(head);
-		this.girl.getChildAt(0).addChild(this.make.sprite(0, 0, 'face'));
+		this.girl.getChildAt(0).addChild(this.make.sprite(0, 0, 'face', 0));
 		this.girl.inputEnabled = true;
 		// Hair sprites
 		var arm_left = this.make.sprite(37, 26, 'arm_left', 0);
@@ -87,7 +95,7 @@ Game.Gameplay.prototype =
 
 		// Hair growth timer
 		this.timer = this.time.events.loop(Phaser.Timer.SECOND * this.growth_interval, this.growHair, this);
-		this.time.events.add(Phaser.Timer.SECOND * 3, this.createCrit, this);
+		this.time.events.loop(Phaser.Timer.SECOND * 1, this.createCrit, this);
 
 		// Fade in
 		this.camera.flash('#000000');
@@ -137,26 +145,54 @@ Game.Gameplay.prototype =
 	{
 		function createBubble(crit)
 		{
-			var bubble = crit.addChild(this.make.sprite(0, 0, 'bubble'));
-			bubble.anchor.x = 0.5;
-			bubble.anchor.y = 0.5;
+			var bubble = crit.addChild(this.make.sprite(0, 20, 'bubble'));
+			bubble.anchor.setTo(0.5, 0.5);
 			var bub_tween = this.add.tween(bubble).to( { y: '+6' }, 600, Phaser.Easing.Linear.Out, true, 0, -1);
 			bub_tween.yoyo(true, 0);
 		};
 
-		var index = Game.rand(1, 3);
-		index = 1;																							// Remove
+		var index = Game.rand(1, 6);
+		var slot = Game.rand(0, 5);
+		console.log(slot);
+		if (!this.crit_slots[slot].free)
+			return;
 		var name = 'cr_0' + index + '_body';
 		var crit = this.crits.create(0, 0, name);
-		crit.x = Game.WIDTH;
-		crit.y = Game.rand(crit.height, Game.HEIGHT);
+		crit.x = this.crit_slots[slot].pos.x;
+		crit.y = this.crit_slots[slot].pos.y;
+		if (slot >= 3)
+		{
+			crit.scale.x *= -1;
+		}
 		crit.addChild(this.make.sprite(0, 0, 'cr_0' + index + '_face', 0));
-		var crit_anim = crit.getChildAt(0).animations.add('wind', [0, 1, 2, 3], 1, true);					// Remove
-		crit_anim.play('wind');																				// Remove
+		this.crit_slots[slot].free = false;
+		crit.crit_slot = slot;
 
 		// Input
 		crit.inputEnabled = true;
 		crit.events.onInputDown.add(this.destroyCrit, this);
+
+		// Sound
+		crit.sounds = {};
+		if (index <= 3)
+		{
+			// It's a woman
+			crit.sounds['angry1'] = this.add.audio('woman_angry_1', 0.1, false);
+			crit.sounds['angry2'] = this.add.audio('woman_angry_2', 0.1, false);
+			crit.sounds['sorry'] = this.add.audio('woman_sorry', 0.1, false);
+			crit.sounds['hurt'] = this.add.audio('woman_hurt', 0.1, false);
+			crit.sounds['laugh'] = this.add.audio('woman_laugh', 0.1, false);
+		}
+		else
+		{
+			// It's a man
+			crit.sounds['angry1'] = this.add.audio('man_angry_1', 0.1, false);
+			crit.sounds['angry2'] = this.add.audio('man_angry_2', 0.1, false);
+			crit.sounds['sorry'] = this.add.audio('man_sorry', 0.1, false);
+			crit.sounds['hurt'] = this.add.audio('man_hurt', 0.1, false);
+			crit.sounds['laugh'] = this.add.audio('man_laugh', 0.1, false);
+		}
+		crit.sounds['angry2'].play();
 
 		// Z-sorting of crits group
 		// Must do a trick with Y value in order to sort properly
@@ -165,7 +201,10 @@ Game.Gameplay.prototype =
 		crit.y += crit.height;
 
 		// Move up tween
-		var show = this.add.tween(crit).to( { x: '-'+(crit.width-100), y: '-'+crit.height }, 240, Phaser.Easing.Linear.Out);
+		var x_sign = (slot >= 3) ? '+' : '-'
+		var x_delta = x_sign + (Math.abs(crit.width) - 120);
+		var y_delta = '-' + crit.height;
+		var show = this.add.tween(crit).to( { x: x_delta, y: y_delta }, 240, Phaser.Easing.Linear.Out);
 		show.onComplete.add(createBubble, this, crit);
 		show.start();
 	},
@@ -177,11 +216,16 @@ Game.Gameplay.prototype =
 		var destroy_tween = this.add.tween(bubble).to( { alpha: 0 }, 100, Phaser.Easing.Linear.Out);
 		var scale_tween = this.add.tween(bubble.scale).to( {x: 2, y: 2}, 100, Phaser.Easing.Linear.Out);
 		// Move down tween
-		var hide_tween = this.add.tween(sprite).to( { x: '+'+(sprite.width-100), y: '+'+sprite.height }, 240, Phaser.Easing.Linear.Out);
+		var hide_tween = this.add.tween(sprite).to( { x: '+'+(sprite.width-120), y: '+'+sprite.height }, 240, Phaser.Easing.Linear.Out);
 		hide_tween.onComplete.add(function(object, tween) { object.destroy() }, this);
 		destroy_tween.chain(hide_tween);
 		scale_tween.start();
 		destroy_tween.start();
+
+		// Other stuff
+		sprite.getChildAt(0).frame = 1;
+		sprite.sounds['hurt'].play();
+		this.crit_slots[sprite.crit_slot].free = true;
 	},
 
 	update: function()
