@@ -12,7 +12,10 @@ Game.Preloader.prototype =
 		//     (Game.GAME_HEIGHT-27)/2, 'preloaderBar');
 		// this.load.setPreloadSprite(this.preloadBar);
 
+		// Images
 		this.load.image('background', 'assets/image/fondo.png');
+		this.load.spritesheet('help', 'assets/image/axuda.png', 960, 540, 1);
+		this.load.spritesheet('ending', 'assets/image/fin.png', 960, 540, 2);
 
 		// Girl
 		this.load.spritesheet('body', 'assets/image/corpo.png', 385, 473);
