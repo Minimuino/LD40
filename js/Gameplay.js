@@ -9,7 +9,8 @@ Game.Gameplay = function(game)
 	this.sounds = {};
 	this.stage = -1;
 	this.go_to_stage = undefined;
-	this.click_count = 0;
+	this.crit_click_count = 0;
+	this.hair_click_count = 0;
 	this.text_sprite;
 	this.crit_slots = [];
 	this.crit_timer;
@@ -82,7 +83,7 @@ Game.Gameplay.prototype =
 		// Gameplay parameters
 		this.sprites_to_grow = [1, 2, 3, 4, 5, 6, 7];
 		this.girl.hair_timer;
-		this.girl.growth_intervals = [99, 5, 2, 1];
+		this.girl.growth_intervals = [99, 7, 4, 2];
 		/*
 		this.girl.hair_stages = [16, 2, 3];
 		this.girl.current_stage = 0;
@@ -129,7 +130,7 @@ Game.Gameplay.prototype =
 
 		// Disable input for a little while
 		this.input.enabled = false;
-		this.time.events.add(Phaser.Timer.SECOND * 3, this.startStage0, this);
+		this.time.events.add(Phaser.Timer.SECOND * 10, this.startStage0, this);
 	},
 
 	playWalkTween: function()
@@ -152,11 +153,11 @@ Game.Gameplay.prototype =
 		this.sounds['pick_hair'].play();
 
 		// Leave crit
-		if (this.stage != 0)
+		if (this.stage != 0 && this.crits)
 			this.leaveCrit(this.crits.getFirstAlive());
 
 		// Stage progress
-		this.click_count += 1;
+		this.hair_click_count += 1;
 	},
 
 	growHair: function()
@@ -190,11 +191,15 @@ Game.Gameplay.prototype =
 			return;
 		}
 
-		if ((this.girl.tint >= 0xfff000) && (tint_delta > 0))
+		if ((this.girl.tint >= 0xffffff) && (tint_delta > 0))
 		{
 			return;
 		}
 		if (this.text_sprite)
+		{
+			return;
+		}
+		if (this.girl.tint >= 0xdfdfdf && (tint_delta > 0))
 		{
 			return;
 		}
@@ -268,6 +273,9 @@ Game.Gameplay.prototype =
 			var bub_tween = this.add.tween(crit.bubble).to( { y: '+6' }, 600, Phaser.Easing.Linear.Out, true, 0, -1);
 			bub_tween.yoyo(true, 0);
 		};
+
+		if (!crit)
+			return;
 
 		crit.alive = true;
 
@@ -345,13 +353,13 @@ Game.Gameplay.prototype =
 		sprite.sounds['hurt'].play();
 		sprite.inputEnabled = false;
 		sprite.alive = false;
-		this.tintWorld(0x090909);
+		this.tintWorld(0x202020);
 
 		// Girl animation
 		this.girl.face.animations.play('smile');
 
 		// Stage progress
-		this.click_count += 1;
+		this.crit_click_count += 1;
 	},
 
 	leaveCrit: function(sprite)
@@ -433,10 +441,11 @@ Game.Gameplay.prototype =
 	showEnding: function()
 	{
 		this.text_sprite = this.add.sprite(0, 0, 'ending', 0);
-		var anim = this.text_sprite.animations.add('default', [0, 1], 0.2, false);
+		var anim = this.text_sprite.animations.add('default', [0, 1], 0.25, false);
 		anim.play('default');
 		this.input.enabled = false;
 		this.pointer.destroy();
+		this.girl.hair_timer.timer.pause();
 	},
 
 	startStage0: function()
@@ -502,7 +511,8 @@ Game.Gameplay.prototype =
 		this.stage = 4;
 
 		this.cleanCrits();
-		this.time.events.add(Phaser.Timer.SECOND * 4, this.showEnding, this);
+		this.crits.destroy();
+		this.time.events.add(Phaser.Timer.SECOND * 7, this.showEnding, this);
 	},
 
 	update: function()
@@ -540,16 +550,29 @@ Game.Gameplay.prototype =
 		{
 			if (hair_rate > 0)
 			{
+				this.updateSlots(6);
+			}
+			else
+			{
+				this.cleanCrits();
+			}
+			if ((this.crit_click_count + this.hair_click_count) > 20)
+				this.go_to_stage = 2;
+		}
+		else if (this.stage == 2)
+		{
+			if (hair_rate > 0)
+			{
 				this.updateSlots(3);
 			}
 			else
 			{
 				this.cleanCrits();
 			}
-			if (this.click_count > 3)
-				this.go_to_stage = 2;
+			if ((this.crit_click_count + this.hair_click_count) > 35)
+				this.go_to_stage = 3;
 		}
-		else if (this.stage == 2)
+		else if (this.stage == 3)
 		{
 			if (hair_rate > 0)
 			{
@@ -559,20 +582,7 @@ Game.Gameplay.prototype =
 			{
 				this.cleanCrits();
 			}
-			if (this.click_count > 6)
-				this.go_to_stage = 4;
-		}
-		else if (this.stage == 3)
-		{
-			if (hair_rate > 0)
-			{
-				this.updateSlots(1);
-			}
-			else
-			{
-				this.cleanCrits();
-			}
-			if (this.click_count > 9)
+			if (this.crit_click_count > 45)
 				this.go_to_stage = 4;
 		}
 		else if (this.stage == 4)
@@ -605,7 +615,7 @@ Game.Gameplay.prototype =
 		if (this.crits.length > 0 && this.stage != 0)
 		{
 			var r = Game.rand(0, 10);
-			if (r < 2)
+			if (r < 1)
 				this.tintWorld(-0x010101);
 		}
 	}
