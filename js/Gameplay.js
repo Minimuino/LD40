@@ -13,7 +13,8 @@ Game.Gameplay = function(game)
 	this.hair_click_count = 0;
 	this.text_sprite;
 	this.crit_slots = [];
-	this.crit_timer;
+	this.show_crit_timers = [];
+	//this.auto_crit_timer;
 	this.crit_slots_database = [
 		{ pos: new Phaser.Point(Game.WIDTH, Game.HEIGHT + 120), free: true },
 		{ pos: new Phaser.Point(-50, Game.HEIGHT + 120), free: true },
@@ -84,11 +85,6 @@ Game.Gameplay.prototype =
 		this.sprites_to_grow = [1, 2, 3, 4, 5, 6, 7];
 		this.girl.hair_timer;
 		this.girl.growth_intervals = [99, 7, 4, 2];
-		/*
-		this.girl.hair_stages = [16, 2, 3];
-		this.girl.current_stage = 0;
-		this.girl.hair_count = 0;
-		*/
 
 		// Move down tween
 		var body_down_1 = this.add.tween(this.girl).to( { y: '+4' }, 400, Phaser.Easing.Cubic.Out);
@@ -123,7 +119,7 @@ Game.Gameplay.prototype =
 		this.sounds['ambient'].play();
 
 		// Auto-crit timer
-		// this.crit_timer = this.time.events.loop(Phaser.Timer.SECOND * 2, this.generateCrit, this);
+		// this.auto_crit_timer = this.time.events.loop(Phaser.Timer.SECOND * 2, this.generateCrit, this);
 
 		// Fade in
 		this.camera.flash('#000000');
@@ -222,10 +218,6 @@ Game.Gameplay.prototype =
 		this.crit_slots[slot].free = false;
 		crit.crit_slot = slot;
 
-		// Input
-		crit.inputEnabled = true;
-		crit.events.onInputDown.add(this.destroyCrit, this);
-
 		// Sound
 		crit.sounds = {};
 		if (index <= 3)
@@ -250,9 +242,14 @@ Game.Gameplay.prototype =
 		crit.alive = false;
 
 		if (!show_delay)
+		{
 			this.showCrit(crit);
+		}
 		else
-			this.time.events.add(Phaser.Timer.SECOND * show_delay, this.showCrit, this, crit);
+		{
+			var timerevent = this.time.events.add(Phaser.Timer.SECOND * show_delay, this.showCrit, this, crit);
+			this.show_crit_timers.push(timerevent);
+		}
 	},
 
 	destroyCritSprite: function(object, tween)
@@ -272,6 +269,9 @@ Game.Gameplay.prototype =
 			crit.bubble.anchor.setTo(0.5, 0.5);
 			var bub_tween = this.add.tween(crit.bubble).to( { y: '+6' }, 600, Phaser.Easing.Linear.Out, true, 0, -1);
 			bub_tween.yoyo(true, 0);
+			// Input
+			crit.inputEnabled = true;
+			crit.events.onInputDown.add(this.destroyCrit, this);
 		};
 
 		if (!crit)
@@ -339,7 +339,7 @@ Game.Gameplay.prototype =
 		var scale_tween = this.add.tween(sprite.bubble.scale).to( {x: 2, y: 2}, 100, Phaser.Easing.Linear.Out);
 		// Move down tween
 		var x_sign = (sprite.crit_slot % 2 == 1) ? '-' : '+'
-		var x_delta = x_sign + (Math.abs(sprite.width) - 120);
+		var x_delta = x_sign + (Math.abs(sprite.width));
 		var y_delta = '+' + sprite.height;
 		var hide_tween = this.add.tween(sprite).to( { x: x_delta, y: y_delta }, 1900, Phaser.Easing.Linear.Out, false, 800);
 		hide_tween.onStart.add(function(object, tween) { object.getChildAt(0).frame = 2; object.sounds['sorry'].play(); }, this);
@@ -372,7 +372,7 @@ Game.Gameplay.prototype =
 			sprite.bubble.frame = 1;
 		// Move side tween
 		var x_sign = (sprite.crit_slot % 2 == 1) ? '-' : '+'
-		var x_delta = x_sign + (Math.abs(sprite.width) - 120);
+		var x_delta = x_sign + (Math.abs(sprite.width) + 120);
 		var hide_tween = this.add.tween(sprite).to( { x: x_delta }, 1900, Phaser.Easing.Linear.Out, false, 800);
 		hide_tween.onComplete.add(this.destroyCritSprite, this);
 		hide_tween.start();
@@ -408,8 +408,15 @@ Game.Gameplay.prototype =
 			else
 			{
 				if (!crit.bubble)
+				{
 					this.destroyCritSprite(crit);
+				}
 			}
+		}
+		// Remove scheduled showCrit events
+		for (var j = 0; j < this.show_crit_timers.length; j += 1)
+		{
+			this.time.events.remove(this.show_crit_timers[j]);
 		}
 	},
 
@@ -434,7 +441,7 @@ Game.Gameplay.prototype =
 	{
 		this.text_sprite = this.add.sprite(0, 0, 'help', 0);
 		this.input.enabled = false;
-		this.time.events.add(Phaser.Timer.SECOND * 10, 
+		this.time.events.add(Phaser.Timer.SECOND * 10,
 			function() { this.text_sprite.destroy(); this.text_sprite = undefined; this.input.enabled = true; }, this);
 	},
 
@@ -463,7 +470,7 @@ Game.Gameplay.prototype =
 		this.stage = 0;
 		this.addCritSlot();
 		this.generateCrit();
-		this.time.events.add(Phaser.Timer.SECOND * 2, createTweezers, this);	
+		this.time.events.add(Phaser.Timer.SECOND * 2, createTweezers, this);
 	},
 
 	startStage1: function()
