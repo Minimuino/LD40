@@ -84,7 +84,7 @@ Game.Gameplay.prototype =
 		// Gameplay parameters
 		this.sprites_to_grow = [1, 2, 3, 4, 5, 6, 7];
 		this.girl.hair_timer;
-		this.girl.growth_intervals = [99, 7, 4, 2];
+		this.girl.growth_intervals = [99, 6, 4, 2];
 
 		// Move down tween
 		var body_down_1 = this.add.tween(this.girl).to( { y: '+4' }, 400, Phaser.Easing.Cubic.Out);
@@ -244,11 +244,13 @@ Game.Gameplay.prototype =
 		if (!show_delay)
 		{
 			this.showCrit(crit);
+			//console.log('no delay');
 		}
 		else
 		{
 			var timerevent = this.time.events.add(Phaser.Timer.SECOND * show_delay, this.showCrit, this, crit);
 			this.show_crit_timers.push(timerevent);
+			//console.log('show delay: ', show_delay);
 		}
 	},
 
@@ -396,14 +398,15 @@ Game.Gameplay.prototype =
 		return count / total;
 	},
 
-	cleanCrits: function()
+	cleanCrits: function(leave_crit_function)
 	{
 		for (var i = 0; i < this.crits.length; i += 1)
 		{
 			var crit = this.crits.getAt(i);
 			if (crit.alive)
 			{
-				this.leaveCrit(crit);
+				//this.leaveCrit(crit);
+				leave_crit_function.call(this, crit);
 			}
 			else
 			{
@@ -431,8 +434,8 @@ Game.Gameplay.prototype =
 		{
 			if (this.crit_slots[i].free)
 			{
-				this.generateCrit(delay * i);
-				break;
+				var new_delay = (this.crits.length > 0) ? (delay * (i + 1)) : 0.3;
+				this.generateCrit(new_delay);
 			}
 		}
 	},
@@ -441,7 +444,7 @@ Game.Gameplay.prototype =
 	{
 		this.text_sprite = this.add.sprite(0, 0, 'help', 0);
 		this.input.enabled = false;
-		this.time.events.add(Phaser.Timer.SECOND * 10,
+		this.time.events.add(Phaser.Timer.SECOND * 9,
 			function() { this.text_sprite.destroy(); this.text_sprite = undefined; this.input.enabled = true; }, this);
 	},
 
@@ -517,9 +520,9 @@ Game.Gameplay.prototype =
 	{
 		this.stage = 4;
 
-		this.cleanCrits();
-		this.crits.destroy();
-		this.time.events.add(Phaser.Timer.SECOND * 7, this.showEnding, this);
+		this.cleanCrits(this.destroyCrit);
+		this.time.events.add(Phaser.Timer.SECOND * 2, function() { this.crits.destroy(); }, this);
+		this.time.events.add(Phaser.Timer.SECOND * 8, this.showEnding, this);
 	},
 
 	update: function()
@@ -557,29 +560,16 @@ Game.Gameplay.prototype =
 		{
 			if (hair_rate > 0)
 			{
-				this.updateSlots(6);
-			}
-			else
-			{
-				this.cleanCrits();
-			}
-			if ((this.crit_click_count + this.hair_click_count) > 20)
-				this.go_to_stage = 2;
-		}
-		else if (this.stage == 2)
-		{
-			if (hair_rate > 0)
-			{
 				this.updateSlots(3);
 			}
 			else
 			{
-				this.cleanCrits();
+				this.cleanCrits(this.leaveCrit);
 			}
-			if ((this.crit_click_count + this.hair_click_count) > 35)
-				this.go_to_stage = 3;
+			if ((this.crit_click_count + this.hair_click_count) > 12)
+				this.go_to_stage = 2;
 		}
-		else if (this.stage == 3)
+		else if (this.stage == 2)
 		{
 			if (hair_rate > 0)
 			{
@@ -587,7 +577,20 @@ Game.Gameplay.prototype =
 			}
 			else
 			{
-				this.cleanCrits();
+				this.cleanCrits(this.leaveCrit);
+			}
+			if ((this.crit_click_count + this.hair_click_count) > 28)
+				this.go_to_stage = 3;
+		}
+		else if (this.stage == 3)
+		{
+			if (hair_rate > 0)
+			{
+				this.updateSlots(1);
+			}
+			else
+			{
+				this.cleanCrits(this.leaveCrit);
 			}
 			if (this.crit_click_count > 45)
 				this.go_to_stage = 4;

@@ -1,5 +1,4 @@
 # The more hair you have...
-===========================
 
 A game made in 72 hours for Ludum Dare 40. You can play it at [gamejolt](https://gamejolt.com/games/ld40/301671).
 
