@@ -14,9 +14,7 @@ Thanks for playing :]
 # License
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-
 Every file in the 'js' folder is licensed under the [GNU General Public License, version 3](https://www.gnu.org/licenses/gpl-3.0), Copyright (C) 2017 Carlos Pérez.
 
 [![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
-
 Every file in the 'assets' folder except 'ambient.ogg' is licensed under the [Creative Commons Attribution-NonCommmercial-ShareAlike 4.0 International](https://creativecommons.org/licenses/by-nc-sa/4.0/), Copyright (C) 2017 Nuria Pico.
