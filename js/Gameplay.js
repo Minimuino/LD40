@@ -1,3 +1,22 @@
+/*
+    Copyright (C) 2017 Carlos Pérez
+
+    This file is part of 'The more hair you have...' (shortened as TMHYH).
+
+    TMHYH is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    TMHYH is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with TMHYH. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 Game.Gameplay = function(game)
 {
 	this.pointer;
@@ -336,9 +355,6 @@ Game.Gameplay.prototype =
 		if (!sprite)
 			return;
 
-		// Bubble tween
-		var destroy_tween = this.add.tween(sprite.bubble).to( { alpha: 0 }, 100, Phaser.Easing.Linear.Out);
-		var scale_tween = this.add.tween(sprite.bubble.scale).to( {x: 2, y: 2}, 100, Phaser.Easing.Linear.Out);
 		// Move down tween
 		var x_sign = (sprite.crit_slot % 2 == 1) ? '-' : '+'
 		var x_delta = x_sign + (Math.abs(sprite.width));
@@ -346,9 +362,19 @@ Game.Gameplay.prototype =
 		var hide_tween = this.add.tween(sprite).to( { x: x_delta, y: y_delta }, 1900, Phaser.Easing.Linear.Out, false, 800);
 		hide_tween.onStart.add(function(object, tween) { object.getChildAt(0).frame = 2; object.sounds['sorry'].play(); }, this);
 		hide_tween.onComplete.add(this.destroyCritSprite, this);
-		destroy_tween.chain(hide_tween);
-		scale_tween.start();
-		destroy_tween.start();
+		if (sprite.bubble)
+		{
+			// Bubble tween
+			var destroy_tween = this.add.tween(sprite.bubble).to( { alpha: 0 }, 100, Phaser.Easing.Linear.Out);
+			var scale_tween = this.add.tween(sprite.bubble.scale).to( {x: 2, y: 2}, 100, Phaser.Easing.Linear.Out);
+			destroy_tween.chain(hide_tween);
+			scale_tween.start();
+			destroy_tween.start();
+		}
+		else
+		{
+			hide_tween.start();
+		}
 
 		// Other stuff
 		sprite.getChildAt(0).frame = 1;
